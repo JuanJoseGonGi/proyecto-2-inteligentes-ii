@@ -1,7 +1,7 @@
 import os
 
 # Directory containing images
-image_dir = "other-models"
+image_dir = "pole"
 image_extensions = [".jpg", ".jpeg", ".png", ".pdf"]  # Add more extensions if needed
 
 # Get list of image files
@@ -12,7 +12,7 @@ image_files = [
 ]
 
 # Generate LaTeX code
-with open("discussion_images.tex", "w") as f:
+with open("discussion_images_cartpole.tex", "w") as f:
     f.flush()
     for batch_index in range(0, len(image_files), 4):
         images = image_files[batch_index : batch_index + 4]
