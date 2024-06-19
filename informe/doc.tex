@@ -9,7 +9,9 @@
 \usepackage{pgffor}
 
 \title{Aproximación de la Ecuación de Movimiento de un Péndulo Simple utilizando Redes Neuronales}
-\author{Juan José González Giraldo}
+\author{Juan José González}
+\author{Juan Camilo Ramírez}
+\author{Juan David Osorio}
 \date{Mayo 2024}
 
 \begin{document}
@@ -17,122 +19,92 @@
 \maketitle
 
 \begin{abstract}
-    En este proyecto, exploramos cómo las redes neuronales pueden utilizarse para aproximar la solución de la ecuación de movimiento de un péndulo simple. El péndulo simple es un sistema físico idealizado que consiste en una masa puntual suspendida de un hilo inextensible de longitud \(L\). Diseñamos una red neuronal que predice el ángulo \(\theta\) del péndulo en función del tiempo \(t\), la longitud \(L\) y la gravedad \(g\).
+    Este informe presenta el proceso y los resultados del Proyecto II del curso de Sistemas Inteligentes II, cuyo objetivo fue entrenar y comparar diferentes modelos DQN (Deep Q-Network) para resolver los problemas de control clásicos en el entorno OpenAI Gym CartPole y MountainCar. Se experimentó con diversas configuraciones de hiperparámetros para evaluar su impacto en el rendimiento del modelo.
 \end{abstract}
 
 \section{Introducción}
-La ecuación diferencial que describe el movimiento de un péndulo simple es:
-\begin{equation}
-    \dv[2]{\theta}{t} + \frac{g}{L} \sin(\theta) = 0
-\end{equation}
-donde:
-\begin{itemize}
-    \item \(\theta\) es el ángulo de desplazamiento del péndulo desde la vertical,
-    \item \(t\) es el tiempo,
-    \item \(g\) es la aceleración debido a la gravedad,
-    \item \(L\) es la longitud del péndulo.
-\end{itemize}
+El control de sistemas dinámicos es un área crucial en la inteligencia artificial y la robótica. Este proyecto se centra en el uso del algoritmo DQN para resolver problemas de control en entornos simulados proporcionados por OpenAI Gym. El objetivo es entrenar y comparar diferentes configuraciones de modelos DQN para evaluar su eficacia en los entornos CartPole y MountainCar.
 
-\section{Objetivo}
-Diseñar una red neuronal para aproximar la solución de la ecuación de movimiento del péndulo simple. Específicamente, la red deberá predecir el ángulo \(\theta\) del péndulo en función del tiempo \(t\), la longitud \(L\) y la gravedad \(g\).
+\section{Metodología}
+\subsection{Configuración del entorno OpenAI Gym}
+Se utilizaron los entornos CartPole y MountainCar de OpenAI Gym para entrenar los modelos DQN. Estos entornos proporcionan desafíos clásicos de control que son ampliamente utilizados para evaluar algoritmos de aprendizaje por refuerzo.
 
-\section{Recopilación de Datos}
-La ecuación diferencial que describe el movimiento de un péndulo simple se puede solucionar como una ecuación diferencial ordinaria. Esto se expresa en la función pendulum:
+\subsection{Arquitectura del modelo DQN}
+El mejor modelo DQN para MountainCar con 2 capas con 64 neuronas y una función de activación ReLU. La capa de salida es una función de activación lineal.
 
-\begin{verbatim}
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import solve_ivp
+\subsection{Hiperparámetros utilizados}
+Los hiperparámetros clave que se experimentaron incluyen la tasa de aprendizaje, el tamaño del batch, el factor de descuento (gamma), la tasa de exploración-explotación (epsilon), el número de épocas, el número de capas y el número de neuronas en cada capa. En el caso específico de MountainCar se añadió un hiperparámetro para controlar el peso que tiene la velocidad en la recompensa.
 
-
-# Definir la función que representa el sistema de ecuaciones diferenciales
-def pendulum(t, y, L=1, g=9.81):
-    theta, omega = y  # theta es el ángulo, omega es la velocidad angular
-    dtheta_dt = omega
-    domega_dt = -(g / L) * np.sin(theta)
-    return np.array([dtheta_dt, domega_dt])
-\end{verbatim}
-
-A partir del sistema de ecuaciones diferenciales que dan soluciones a la ecuación diferencial del péndulo simple se generó un conjunto de datos con las siguientes constantes:
-\begin{itemize}
-    \item Rango de tiempo = [0, 10]
-    \item \(g\) = \(9.81\)
-    \item \(L\) = \(1\)
-\end{itemize}
-
-El conjunto de datos generado consiste en pares de entrada-salida, donde la entrada es el tiempo \(t\), y la salida es el ángulo \(\theta\) correspondiente en ese momento.
-
-\section{Preprocesamiento de Datos}
-Utilizamos normalización MinMax para transformar los datos de entrada y salida a un rango entre [0, 1]. Esto ayuda a mejorar la convergencia y estabilidad del entrenamiento. Hay que tener en cuenta que el rango de los datos de entrada al scaler determinará el rango en el que el modelo funcionará ya que valores superiores o inferiores causan valores menores que 0 y mayores que 1.
-
-\begin{verbatim}
-from sklearn.preprocessing import MinMaxScaler
-
-# Normalizar los datos
-scaler_X = MinMaxScaler()
-X_normalized = scaler_X.fit_transform(X.reshape(-1, 1))
-
-scaler_y = MinMaxScaler()
-y_normalized = scaler_y.fit_transform(y.reshape(-1, 1)).flatten()
-\end{verbatim}
-
-Usamos 2 scalers para diferenciar los valores de entrada y de salida.
-
-\section{Diseño de la Red Neuronal}
-La red neuronal diseñada para este proyecto es una red feedforward (FFNN) secuencial con la siguiente arquitectura:
-\begin{itemize}
-    \item Capa de entrada: 1 neurona (para \(t\)).
-    \item 8 capas ocultas, cada una con 64 neuronas y función de activación ReLU.
-    \item Capa de salida: 1 neurona (para \(\theta\)) con función de activación lineal.
-    \item Optimizador: Adam
-    \item Función de pérdida: MSE
-\end{itemize}
-
-\begin{verbatim}
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.metrics import RootMeanSquaredError
-
-model = Sequential()
-model.add(Input(shape=(1,)))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(64, activation="relu"))
-model.add(Dense(1))
-
-model.compile(optimizer=Adam(), loss="mse", metrics=[RootMeanSquaredError()])
-model.summary()
-\end{verbatim}
+\subsection{Estrategia de entrenamiento}
+Los modelos se entrenaron utilizando la técnica de aprendizaje por refuerzo con experiencia de repetición, donde se almacenan transiciones en un buffer de experiencia y se realizan actualizaciones periódicas de la red objetivo. Además se utilizó la política de epsilon-greedy para controlar la exploración del modelo.
 
 \section{Resultados}
-El modelo final muestra una buena capacidad de generalización y precisión en las predicciones del ángulo \(\theta\).
-\begin{itemize}
-    \item MSE = \(\qty{1.21e-4}{}\)
-    \item RMSE = \(\qty{6.67e-5}{}\)
-\end{itemize}
+Los modelos finales muestran una buena capacidad de acción y precisión en los entornos de control de OpenAI Gym. Se evaluaron las recompensas promedio y la tasa de éxito en cada entorno. Los resultados se presentan en forma de gráficos y tablas comparativas.
+\subsection*{Mountain}
+\begin{table}[]
+    \begin{tabular}{lllllllllllllllll}
+    model                                  & evaluate\_max\_reward & evaluate\_rewards\_mean & evaluate\_rewards\_std & hidden\_layers & units\_per\_layer & activation\_per\_layer & output\_layer\_activation & num\_episodes & learning\_rate & epsilon               & epsilon\_min & epsilon\_decay & batch\_size & discount & update\_target\_every & speed\_weight \\
+    2024-06-15\_12-31-16\_dqn\_mountaincar & -87.0                 & -109.1                  & 20.344286667268527     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.005          & 0.6063789448611848    & 0.001        & 0.999          & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_13-02-52\_dqn\_mountaincar & -86.0                 & -112.9                  & 22.106333933965622     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.001          & 0.0009550049507968265 & 0.001        & 0.9            & 64          & 0.9      & 20                    & 50.0          \\
+    2024-06-15\_13-39-22\_dqn\_mountaincar & -146.0                & -150.3                  & 2.9681644159311658     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.0001         & 0.0009833015279105794 & 0.001        & 0.95           & 64          & 0.9      & 20                    & 20.0          \\
+    2024-06-15\_13-45-28\_dqn\_mountaincar & -116.0                & -183.5                  & 33.00681747760605      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.01           & 0.13397967485796175   & 0.001        & 0.99           & 32          & 0.9      & 10                    & 20.0          \\
+    2024-06-15\_12-43-21\_dqn\_mountaincar & -84.0                 & -121.7                  & 23.65607744322799      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.001          & 0.07341467529625044   & 0.001        & 0.995          & 256         & 0.9      & 20                    & 50.0          \\
+    2024-06-15\_13-00-05\_dqn\_mountaincar & -85.0                 & -115.1                  & 26.200954181098062     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.001          & 0.07341467529625044   & 0.001        & 0.995          & 256         & 0.9      & 20                    & 10.0          \\
+    2024-06-15\_08-13-32\_dqn\_mountaincar & -200.0                & -200.0                  & 0.0                    & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.005          & 0.6063789448611848    & 0.005        & 0.999          & 256         & 0.95     & 40                    &               \\
+    2024-06-15\_13-20-27\_dqn\_mountaincar & -140.0                & -147.8                  & 8.681013765684282      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.01           & 0.006570483042414605  & 0.001        & 0.99           & 256         & 0.9      & 20                    & 100.0         \\
+    2024-06-15\_10-54-10\_dqn\_mountaincar & -108.0                & -141.2                  & 11.745637488020817     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.005          & 0.3676954247709635    & 0.001        & 0.999          & 128         & 0.9      & 40                    & 1000.0        \\
+    2024-06-15\_13-41-53\_dqn\_mountaincar & -92.0                 & -130.9                  & 23.394230057858284     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.005          & 0.0009833015279105794 & 0.001        & 0.95           & 64          & 0.9      & 20                    & 20.0          \\
+    2024-06-15\_12-23-27\_dqn\_mountaincar & -87.0                 & -126.7                  & 23.05666931714119      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.005          & 0.000993147795920851  & 0.001        & 0.99           & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_11-21-25\_dqn\_mountaincar & -110.0                & -137.7                  & 19.36517492820553      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.005          & 0.3676954247709635    & 0.001        & 0.999          & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_13-45-47\_dqn\_mountaincar & -96.0                 & -134.2                  & 24.632498858215744     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.005          & 0.0009833015279105794 & 0.001        & 0.95           & 64          & 0.9      & 20                    & 20.0          \\
+    2024-06-15\_11-01-53\_dqn\_mountaincar & -85.0                 & -109.1                  & 20.539961051569694     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.005          & 0.9048328935585562    & 0.001        & 0.9999         & 128         & 0.9      & 40                    & 1000.0        \\
+    2024-06-15\_12-35-51\_dqn\_mountaincar & -89.0                 & -127.1                  & 22.232633672149593     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 500           & 0.001          & 0.006570483042414605  & 0.001        & 0.99           & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_16-46-16\_dqn\_mountaincar & -111.0                & -128.5                  & 14.23551895787435      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.001          & 0.13397967485796175   & 0.001        & 0.99           & 32          & 0.9      & 10                    & 100.0         \\
+    2024-06-15\_12-16-56\_dqn\_mountaincar & -108.0                & -126.6                  & 17.48256274120016      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 10000         & 0.005          & 0.3678610464329692    & 0.001        & 0.9999         & 128         & 0.9      & 40                    & 1000.0        \\
+    2024-06-15\_13-48-51\_dqn\_mountaincar & -93.0                 & -113.8                  & 14.218298069740978     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.001          & 0.13397967485796175   & 0.001        & 0.99           & 512         & 0.7      & 40                    & 100.0         \\
+    2024-06-15\_12-43-26\_dqn\_mountaincar & -144.0                & -154.9                  & 17.397988389466178     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.01           & 0.3676954247709635    & 0.001        & 0.999          & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_13-36-42\_dqn\_mountaincar & -84.0                 & -104.4                  & 18.456435192094922     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 200           & 0.001          & 0.0009833015279105794 & 0.001        & 0.95           & 64          & 0.9      & 20                    & 20.0          \\
+    2024-06-15\_11-57-24\_dqn\_mountaincar & -118.0                & -136.7                  & 16.186722954322782     & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.01           & 0.3676954247709635    & 0.001        & 0.999          & 128         & 0.9      & 40                    & 100.0         \\
+    2024-06-15\_13-56-21\_dqn\_mountaincar & -85.0                 & -114.8                  & 26.32413341403663      & 2              & {[}64, 64{]}      & {[}'relu', 'relu'{]}   & linear                    & 1000          & 0.001          & 0.000993147795920851  & 0.001        & 0.99           & 512         & 0.7      & 40                    & 100.0
+    \end{tabular}
+    \end{table}
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{.7\linewidth}
-        \centering
-        \includegraphics[width=\textwidth]{true_vs_prediction_pendulum.png}
-        \caption{Reales vs predicciones en el péndulo}
-        \label{fig:true_vs_prediction_pendulum}
-    \end{subfigure}
-    \begin{subfigure}{.7\linewidth}
-        \centering
-        \includegraphics[width=\textwidth]{loss.png}
-        \caption{Reducción del error}
-        \label{fig:loss}
-    \end{subfigure}
-    \caption{Rendimiento del modelo}
-\end{figure}
+\subsection*{CartPole}
+\begin{table}[]
+    \begin{tabular}{llllllllllllllll}
+    model                               & evaluate\_max\_reward & evaluate\_rewards\_mean & evaluate\_rewards\_std & hidden\_layers & units\_per\_layer        & activation\_per\_layer               & output\_layer\_activation & num\_episodes & learning\_rate & epsilon              & epsilon\_min & epsilon\_decay & batch\_size & discount & update\_target\_every \\
+    2024-06-13\_17-34-57\_dqn\_cartpole & 10.0                  & 10.0                    & 0.0                    & 4              & {[}512, 512, 512, 512{]} & {[}'relu', 'relu', 'relu', 'relu'{]} & linear                    & 10000         & 0.01           & 0.000993147795920851 & 0.001        & 0.99           & 32          & 0.9      & 20                    \\
+    2024-06-14\_00-20-45\_dqn\_cartpole & 86.0                  & 86.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.001          & 0.004998338275642187 & 0.005        & 0.999          & 128         & 0.9      & 40                    \\
+    2024-06-13\_21-08-24\_dqn\_cartpole & 92.0                  & 92.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 5000          & 0.001          & 0.006721111959865607 & 0.005        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-14\_09-34-50\_dqn\_cartpole & 201.0                 & 201.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.9      & 30                    \\
+    2024-06-13\_18-59-17\_dqn\_cartpole & 86.0                  & 86.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 3000          & 0.01           & 0.74080710775091     & 0.001        & 0.9999         & 32          & 0.9      & 20                    \\
+    2024-06-14\_17-31-42\_dqn\_cartpole & 214.0                 & 214.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.001          & 0.5487951708942683   & 0.005        & 0.9999         & 128         & 0.95     & 40                    \\
+    2024-06-14\_18-54-27\_dqn\_cartpole & 9.0                   & 9.0                     & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & sigmoid                   & 6000          & 0.005          & 0.004998338275642187 & 0.005        & 0.999          & 128         & 0.95     & 40                    \\
+    2024-06-14\_18-17-10\_dqn\_cartpole & 95.0                  & 95.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.005          & 0.1652542546206636   & 0.005        & 0.9997         & 128         & 0.95     & 40                    \\
+    2024-06-13\_18-42-33\_dqn\_cartpole & 9.0                   & 9.0                     & 0.0                    & 2              & {[}512, 512{]}           & {[}'relu', 'relu'{]}                 & linear                    & 10000         & 0.01           & 0.000993147795920851 & 0.001        & 0.99           & 32          & 0.9      & 20                    \\
+    2024-06-13\_23-08-40\_dqn\_cartpole & 89.0                  & 89.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.9      & 40                    \\
+    2024-06-14\_16-42-26\_dqn\_cartpole & 119.0                 & 119.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.95     & 40                    \\
+    2024-06-15\_00-29-02\_dqn\_cartpole & 10.0                  & 10.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 7000          & 0.001          & 0.004998338275642187 & 0.005        & 0.999          & 128         & 0.95     & 40                    \\
+    2024-06-13\_18-50-05\_dqn\_cartpole & 336.0                 & 336.0                   & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 3000          & 0.01           & 0.04971239399803625  & 0.001        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-14\_18-50-42\_dqn\_cartpole & 500.0                 & 500.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.005          & 0.01497353923933631  & 0.005        & 0.9993         & 128         & 0.95     & 40                    \\
+    2024-06-13\_19-11-27\_dqn\_cartpole & 88.0                  & 88.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 3000          & 0.005          & 0.04971239399803625  & 0.001        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-14\_13-15-56\_dqn\_cartpole & 9.0                   & 9.0                     & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.99     & 30                    \\
+    2024-06-14\_15-38-10\_dqn\_cartpole & 214.0                 & 214.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.8      & 30                    \\
+    2024-06-13\_18-56-41\_dqn\_cartpole & 10.0                  & 10.0                    & 0.0                    & 2              & {[}128, 128{]}           & {[}'relu', 'relu'{]}                 & linear                    & 3000          & 0.01           & 0.04971239399803625  & 0.001        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-14\_11-09-14\_dqn\_cartpole & 255.0                 & 255.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.99     & 10                    \\
+    2024-06-13\_19-37-45\_dqn\_cartpole & 9.0                   & 9.0                     & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.005          & 0.00247132211701599  & 0.001        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-13\_21-45-52\_dqn\_cartpole & 230.0                 & 230.0                   & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 5000          & 0.001          & 0.006721111959865607 & 0.005        & 0.999          & 128         & 0.9      & 20                    \\
+    2024-06-13\_22-34-12\_dqn\_cartpole & 96.0                  & 96.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 5000          & 0.001          & 0.006721111959865607 & 0.005        & 0.999          & 128         & 0.9      & 20                    \\
+    2024-06-13\_20-39-12\_dqn\_cartpole & 14.0                  & 14.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 5000          & 0.005          & 0.006721111959865607 & 0.005        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-14\_19-20-40\_dqn\_cartpole & 500.0                 & 500.0                   & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.005          & 0.004998338275642187 & 0.005        & 0.999          & 128         & 0.95     & 40                    \\
+    2024-06-14\_18-05-51\_dqn\_cartpole & 97.0                  & 97.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.001          & 0.04974972962361759  & 0.005        & 0.9995         & 128         & 0.95     & 40                    \\
+    2024-06-14\_13-24-09\_dqn\_cartpole & 44.0                  & 44.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.99     & 40                    \\
+    2024-06-13\_23-49-30\_dqn\_cartpole & 92.0                  & 92.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 4000          & 0.001          & 0.018279019827489446 & 0.005        & 0.999          & 128         & 0.9      & 10                    \\
+    2024-06-14\_17-21-25\_dqn\_cartpole & 86.0                  & 86.0                    & 0.0                    & 2              & {[}64, 64{]}             & {[}'relu', 'relu'{]}                 & linear                    & 10000         & 0.001          & 0.004998338275642187 & 0.005        & 0.999          & 128         & 0.8      & 30                    \\
+    2024-06-13\_22-09-48\_dqn\_cartpole & 90.0                  & 90.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 6000          & 0.001          & 0.00247132211701599  & 0.001        & 0.999          & 32          & 0.9      & 20                    \\
+    2024-06-13\_19-16-11\_dqn\_cartpole & 49.0                  & 49.0                    & 0.0                    & 2              & {[}256, 256{]}           & {[}'relu', 'relu'{]}                 & linear                    & 3000          & 0.01           & 0.22304647413401948  & 0.001        & 0.9995         & 32          & 0.9      & 20
+    \end{tabular}
+    \end{table}
 
 \section{Discusión}
 Se entrenaron múltiples modelos variando los hiperparámetros como la cantidad de epochs, la cantidad de capas y la cantidad de neuronas en cada capa. La decisión del mejor modelo se tomó a partir del valor mas bajo de error en validación.
