@@ -1,18 +1,17 @@
 import os
 
 # Directory containing images
-image_dir = "pole"
+image_dir = "mountain"
 image_extensions = [".jpg", ".jpeg", ".png", ".pdf"]  # Add more extensions if needed
 
+paths = os.listdir(image_dir)
+paths.sort()
+
 # Get list of image files
-image_files = [
-    f
-    for f in os.listdir(image_dir)
-    if os.path.splitext(f)[1].lower() in image_extensions
-]
+image_files = [f for f in paths if os.path.splitext(f)[1].lower() in image_extensions]
 
 # Generate LaTeX code
-with open("discussion_images_cartpole.tex", "w") as f:
+with open("discussion_images_mountain.tex", "w") as f:
     f.flush()
     for batch_index in range(0, len(image_files), 4):
         images = image_files[batch_index : batch_index + 4]
